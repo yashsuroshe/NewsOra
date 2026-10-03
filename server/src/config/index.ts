@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// override:false — do NOT clobber vars already set in the environment
+// (e.g., by vitest's `env` block or shell exports). This lets tests
+// inject their own values before any .env file is applied.
+dotenv.config({ override: false });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

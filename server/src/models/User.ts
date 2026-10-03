@@ -69,10 +69,8 @@ const userSchema = new Schema<IUser>(
   },
 );
 
-// ─── Indexes ──────────────────────────────────────────────────────────────────
-
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ googleId: 1 }, { sparse: true });
+// Note: email unique index and googleId sparse index are created automatically
+// by Mongoose from the field-level declarations above. No duplicate .index() needed.
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 

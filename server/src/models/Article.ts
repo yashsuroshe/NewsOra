@@ -39,7 +39,7 @@ const articleSchema = new Schema<IArticle>(
 
 // ─── Indexes ──────────────────────────────────────────────────────────────────
 
-articleSchema.index({ urlHash: 1 }, { unique: true });
+// Note: urlHash unique index is auto-created from field-level declaration above.
 articleSchema.index({ topics: 1, publishedAt: -1 });
 articleSchema.index({ storyId: 1 });
 articleSchema.index({ importance: -1, publishedAt: -1 });
