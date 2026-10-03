@@ -81,3 +81,6 @@ export function getFeedsForTopics(topics: string[]): string[] {
 
   return Array.from(feedSet);
 }
+
+/** Sorted list of all predefined topic keys — used by the UI and preferences validation. */
+export const PREDEFINED_TOPICS: string[] = Object.keys(TOPIC_FEEDS).sort();

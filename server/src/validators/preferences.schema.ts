@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { SUPPORTED_TOPICS } from '../config/feeds.js';
 
 export const updatePreferencesSchema = z.object({
   topics: z
@@ -17,5 +16,4 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-export { SUPPORTED_TOPICS };
 export type UpdatePreferencesInput = z.infer<typeof updatePreferencesSchema>;
