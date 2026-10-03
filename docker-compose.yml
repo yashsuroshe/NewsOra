@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  # ── API Server ────────────────────────────────────────────
+  # ── API Server ─────────────────────────────────────────────────────────────
   api:
     build:
       context: ./server
       target: development
     command: npm run dev
     ports:
-      - '3001:3001'
+      - '4000:4000'
     env_file:
-      - ./server/.env
+      - .env
     volumes:
       - ./server/src:/app/src:ro
     depends_on:
@@ -19,15 +19,20 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # ── Ingestion Worker ──────────────────────────────────────
+  # ── Ingestion Worker ───────────────────────────────────────────────────────
   ingestion-worker:
     build:
       context: ./server
       target: development
     command: npm run dev:worker:ingest
     env_file:
-      - ./server/.env
+      - .env
     volumes:
       - ./server/src:/app/src:ro
     depends_on:
@@ -37,14 +42,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Agent Worker ──────────────────────────────────────────
+  # ── Agent Worker ───────────────────────────────────────────────────────────
   agent-worker:
     build:
       context: ./server
       target: development
     command: npm run dev:worker:agent
     env_file:
-      - ./server/.env
+      - .env
     volumes:
       - ./server/src:/app/src:ro
     depends_on:
@@ -54,12 +59,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── React Frontend ────────────────────────────────────────
+  # ── React Frontend ─────────────────────────────────────────────────────────
   client:
     build:
       context: ./client
       target: development
-    command: npm run dev -- --host
     ports:
       - '5173:5173'
     volumes:
@@ -68,7 +72,7 @@ services:
       - api
     restart: unless-stopped
 
-  # ── MongoDB ───────────────────────────────────────────────
+  # ── MongoDB ────────────────────────────────────────────────────────────────
   mongodb:
     image: mongo:7-jammy
     ports:
@@ -82,7 +86,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Redis ─────────────────────────────────────────────────
+  # ── Redis ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:

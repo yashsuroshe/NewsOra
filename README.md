@@ -1,95 +1,301 @@
-# NewsOra 🗞️
+# NewsOra 📰🤖
 
-> AI Real-Time News Intelligence & Personal Briefing Companion
+> **AI-powered personal news intelligence platform** — real-time briefings, RAG-powered chat, and smart alerts. Built entirely on free-tier services.
 
-NewsOra delivers personalized, real-time news briefings powered by multi-agent AI, RAG (Retrieval-Augmented Generation), and live data sources — built entirely on free-tier infrastructure.
+[![CI](https://github.com/YOUR_USERNAME/newsora/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/newsora/actions/workflows/ci.yml)
 
 ---
 
-## Architecture
+## ✨ Features
 
-```
-Google News RSS / GNews / Tavily
-        ↓
-  Ingestion Worker (BullMQ)
-  fetch → extract → enrich (LLM) → embed → cluster
-        ↓
-  MongoDB Atlas + Atlas Vector Search
-        ↓
-  Agent Worker (LangGraph)
-  relevance → impact → briefing → alert
-        ↓
-  Express API ← React Frontend
-  (auth, chat/RAG, briefings, alerts)
-        ↓
-  Socket.io push + SSE streaming
-```
-
-## Tech Stack
-
-| Layer | Technology |
+| Feature | Description |
 |---|---|
-| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
-| Backend | Node.js 20 + Express + TypeScript |
-| AI Orchestration | LangGraph.js + LangChain.js |
-| LLM Providers | Groq (Llama 3.x) → Gemini 2.5 Flash |
-| Embeddings | Gemini embedding-001 (768 dims) |
-| Database | MongoDB Atlas M0 (free) |
-| Vector Search | Atlas Vector Search |
-| Cache / Queue | Upstash Redis + BullMQ |
-| Real-time | Socket.io + SSE |
-| DevOps | Docker Compose + GitHub Actions |
+| 🗞️ **Multi-source ingestion** | Google News RSS + GNews + Tavily, deduplicated by SHA-256 URL hash |
+| 🤖 **LLM enrichment** | Groq (llama-3.1-8b-instant) → Gemini fallback: summary, topics, importance, entities |
+| 🔍 **Hybrid search** | Atlas Vector Search (semantic) + MongoDB text search (keyword) |
+| 💬 **RAG chat** | SSE streaming with source citations — ask anything about recent news |
+| 📰 **LangGraph briefings** | 4-node multi-agent pipeline: collect → filter → analyze → write |
+| 🔔 **Real-time alerts** | Socket.io push alerts for high-importance (≥8) breaking news |
+| 🔐 **Dual auth** | Email/password + Google OAuth, JWT rotation + refresh token family revocation |
 
-## Getting Started
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Client (React + Vite)                   │
+│  Login / Register │ Dashboard │ Chat (SSE) │ Preferences     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ REST + SSE + Socket.io
+┌──────────────────────────▼──────────────────────────────────┐
+│                   API Server (Express + TS)                   │
+│  Auth │ Articles │ Chat │ Briefings │ Alerts │ Preferences   │
+└────────┬─────────────────────┬────────────────┬─────────────┘
+         │                     │                │
+  ┌──────▼──────┐    ┌─────────▼──────┐  ┌─────▼──────┐
+  │  MongoDB     │    │ Upstash Redis  │  │ Atlas Vector│
+  │  (M0 Free)  │    │ (BullMQ queues)│  │  Search     │
+  └─────────────┘    └────────────────┘  └────────────┘
+         │
+  ┌──────▼──────────────────────────────────────┐
+  │  Workers (BullMQ)                            │
+  │  ┌─────────────────┐  ┌──────────────────┐  │
+  │  │ Ingestion Worker │  │  Agent Worker    │  │
+  │  │ RSS+GNews+Tavily │  │  LangGraph       │  │
+  │  │ → Enrich → Embed │  │  Briefing Agent  │  │
+  │  └─────────────────┘  └──────────────────┘  │
+  └─────────────────────────────────────────────┘
+```
+
+**3-process model:** `api` · `ingestion-worker` · `agent-worker`
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js ≥ 20
-- Docker & Docker Compose (for local MongoDB + Redis)
+- Node.js 20+
+- MongoDB Atlas M0 (free) — [atlas.mongodb.com](https://atlas.mongodb.com)
+- Upstash Redis (free) — [upstash.com](https://upstash.com)
 
-### Setup
+### 1. Clone & install
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/yourusername/newsora.git
+git clone https://github.com/YOUR_USERNAME/newsora.git
 cd newsora
-
-# 2. Copy env template and fill in your API keys
-cp .env.example server/.env
-
-# 3. Install dependencies
-npm install
-
-# 4. Start local infrastructure (MongoDB + Redis)
-docker compose up mongodb redis -d
-
-# 5. Start the API server
-npm run dev:server
-
-# 6. Start the React client (new terminal)
-npm run dev:client
+npm install          # installs all workspaces
 ```
 
-Open [http://localhost:5173](http://localhost:5173)
+### 2. Configure environment
 
-### API Keys Required (all free)
-- [Groq](https://console.groq.com/) — Fast LLM inference
-- [Google Gemini](https://aistudio.google.com/) — Embeddings + LLM fallback
-- [MongoDB Atlas](https://mongodb.com/atlas) — M0 free cluster
-- [Upstash](https://upstash.com/) — Free Redis
-- [GNews](https://gnews.io/) — News API (optional)
-- [Tavily](https://tavily.com/) — Search API (optional)
-- [Google Cloud](https://console.cloud.google.com/) — OAuth (optional)
+```bash
+cp .env.example .env
+# Edit .env with your API keys (see below)
+```
 
-## Development Phases
+### 3. Start (Docker — easiest)
 
-- [x] Part 1: Monorepo scaffold
-- [ ] Part 2: Express middleware stack
-- [ ] Part 3: MongoDB models
-- [ ] Part 4: Auth (email/password)
-- [ ] Part 5: Google OAuth
-- [ ] Part 6: User preferences
-- [ ] ...and more
+```bash
+docker compose up
+```
 
-## License
+Runs: API on `:4000`, Client on `:5173`, MongoDB on `:27017`, Redis on `:6379`.
+
+### 4. Start (manual)
+
+```bash
+# Terminal 1 — API server
+cd server && npm run dev
+
+# Terminal 2 — Ingestion worker
+cd server && npm run dev:worker:ingest
+
+# Terminal 3 — Agent worker
+cd server && npm run dev:worker:agent
+
+# Terminal 4 — Frontend
+cd client && npm run dev
+```
+
+---
+
+## 🔑 Environment Variables
+
+All variables in one `.env` at the project root. Server reads from `server/.env` (copy the same file).
+
+### Required
+
+| Variable | Where to get it | Notes |
+|---|---|---|
+| `MONGODB_URI` | [MongoDB Atlas](https://atlas.mongodb.com) | Free M0 cluster |
+| `REDIS_URL` | [Upstash](https://upstash.com) | Free 256MB |
+| `JWT_SECRET` | Generate: `openssl rand -hex 32` | ≥32 chars |
+| `JWT_REFRESH_SECRET` | Generate: `openssl rand -hex 32` | ≥32 chars |
+| `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) | Free 14.4K RPD |
+| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com) | Free tier |
+| `CLIENT_URL` | `http://localhost:5173` | |
+| `CORS_ORIGINS` | `http://localhost:5173` | |
+
+### Optional (enable more news sources)
+
+| Variable | Where to get it | Free limit |
+|---|---|---|
+| `GNEWS_API_KEY` | [gnews.io](https://gnews.io) | 100 req/day |
+| `TAVILY_API_KEY` | [tavily.com](https://tavily.com) | 1,000 req/month |
+| `GOOGLE_CLIENT_ID` | [Google Console](https://console.cloud.google.com) | — |
+| `GOOGLE_CLIENT_SECRET` | Google Console | — |
+
+---
+
+## 📡 API Reference
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | — | Register with email + password |
+| POST | `/api/v1/auth/login` | — | Login, returns JWT + sets cookie |
+| POST | `/api/v1/auth/refresh` | Cookie | Rotate refresh token |
+| POST | `/api/v1/auth/logout` | Bearer | Revoke refresh token |
+| GET | `/api/v1/auth/me` | Bearer | Get current user |
+| GET | `/api/v1/auth/google` | — | Initiate Google OAuth |
+
+### Articles
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/articles` | Paginated feed `?page=1&limit=20&topics=AI,Tech` |
+| GET | `/api/v1/articles/search` | Hybrid search `?q=quantum+computing&maxResults=10` |
+| GET | `/api/v1/articles/:id` | Get article by ID |
+
+### Chat (SSE Streaming)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/chat/conversations` | Create conversation |
+| GET | `/api/v1/chat/conversations` | List conversations |
+| GET | `/api/v1/chat/conversations/:id/messages` | Get messages |
+| POST | `/api/v1/chat/conversations/:id/stream` | **SSE stream** — body: `{query, topics?}` |
+| DELETE | `/api/v1/chat/conversations/:id` | Delete with cascade |
+
+**SSE event format:**
+```
+data: {"type":"token","content":"..."}
+data: {"type":"done","sources":[{"title":"...","url":"...","source":"..."}]}
+data: {"type":"error","message":"..."}
+```
+
+### Briefings
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/briefings/generate` | Generate now `{type:"daily"\|"weekly"}` |
+| GET | `/api/v1/briefings` | List briefing history |
+| GET | `/api/v1/briefings/:id` | Get single briefing |
+
+### Preferences
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/preferences` | Get preferences + available topics |
+| PUT | `/api/v1/preferences` | Replace `{topics, frequency, alertThreshold}` |
+| POST | `/api/v1/preferences/topics` | Add topic `{topic}` |
+| DELETE | `/api/v1/preferences/topics/:topic` | Remove topic |
+
+### Alerts
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/alerts` | List alerts with unread count |
+| PATCH | `/api/v1/alerts/:id/read` | Mark one as read |
+| PATCH | `/api/v1/alerts/read-all` | Mark all as read |
+
+---
+
+## 🧪 Testing
+
+```bash
+cd server
+npm test              # Run all unit tests (vitest)
+npx tsc --noEmit      # Typecheck only
+```
+
+**Test coverage:**
+- Auth service (10 tests)
+- Preferences service (7 tests)
+- News fetcher + dedup (10 tests)
+- LLM enricher (3 tests)
+- Text chunker (5 tests)
+- Conversation service (4 tests)
+
+---
+
+## 🐳 Docker Deployment
+
+### Development
+
+```bash
+docker compose up
+```
+
+### Production build
+
+```bash
+# Build production images
+docker build -t newsora-api --target production ./server
+docker build -t newsora-client --target production \
+  --build-arg VITE_API_URL=https://your-api.com/api/v1 ./client
+```
+
+---
+
+## 🗄️ Database Setup
+
+### Atlas Vector Search Index
+
+Run once after first deployment:
+
+```bash
+cd server
+MONGODB_URI=<your-atlas-uri> npx tsx src/scripts/create-vector-index.ts
+```
+
+This creates the HNSW index on `VectorChunk.embedding` (768 dims, cosine similarity).
+
+---
+
+## 📁 Project Structure
+
+```
+newsora/
+├── client/                   # React + Vite + Tailwind
+│   ├── src/
+│   │   ├── components/       # ProtectedRoute
+│   │   ├── layouts/          # AppLayout (sidebar + Socket.io alerts)
+│   │   ├── lib/              # Axios instance (auto-refresh)
+│   │   ├── pages/            # Login, Register, Dashboard, Chat, Preferences
+│   │   └── stores/           # Zustand auth store
+│   └── Dockerfile
+├── server/                   # Express + TypeScript
+│   ├── src/
+│   │   ├── agents/           # LangGraph briefing pipeline
+│   │   ├── config/           # Zod env validation, feeds, passport
+│   │   ├── controllers/      # HTTP handlers
+│   │   ├── middleware/        # auth, validate, rateLimit, error
+│   │   ├── models/           # 8 Mongoose models
+│   │   ├── queues/           # BullMQ queue definitions
+│   │   ├── routes/           # Express routers
+│   │   ├── services/
+│   │   │   ├── auth/         # JWT rotation + family revocation
+│   │   │   ├── chat/         # RAG chat + conversation history
+│   │   │   ├── ingestion/    # RSS + GNews + Tavily + enricher
+│   │   │   └── rag/          # Chunker + embedder + hybrid search
+│   │   ├── sockets/          # Socket.io server
+│   │   └── workers/          # Ingestion + agent worker entry points
+│   └── Dockerfile
+├── .github/workflows/ci.yml  # GitHub Actions CI
+├── docker-compose.yml        # Full local dev stack
+└── .env.example              # Environment variable template
+```
+
+---
+
+## 🆓 Free Tier Usage Summary
+
+| Service | Tier | Limit |
+|---|---|---|
+| MongoDB Atlas | M0 | 512 MB storage, 3 search indexes |
+| Upstash Redis | Free | 256 MB, 10K commands/day |
+| Groq API | Free | 14,400 RPD, llama-3.1-8b-instant |
+| Gemini API | Free | 1,500 RPM embedding, 15 RPM generate |
+| GNews | Free | 100 requests/day |
+| Tavily | Free | 1,000 requests/month |
+
+**Total monthly cost: \$0** 🎉
+
+---
+
+## 📄 License
 
 MIT
