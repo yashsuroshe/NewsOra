@@ -1,33 +1,57 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Pages — will be filled in subsequent parts
-const DashboardPage = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold text-brand-600 mb-2">NewsOra</h1>
-      <p className="text-gray-500">AI News Intelligence — Dashboard coming soon</p>
-    </div>
-  </div>
-);
+import ProtectedRoute from './components/ProtectedRoute';
+import AppLayout from './layouts/AppLayout';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import OAuthCallbackPage from './pages/OAuthCallbackPage';
+import DashboardPage from './pages/DashboardPage';
+import ChatPage from './pages/ChatPage';
+import PreferencesPage from './pages/PreferencesPage';
 
-const LoginPage = () => (
-  <div className="flex items-center justify-center h-screen bg-gray-50">
-    <div className="text-center">
-      <h1 className="text-3xl font-bold mb-2">Login</h1>
-      <p className="text-gray-500">Auth UI coming in Part 4</p>
-    </div>
-  </div>
-);
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
+});
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        {/* More routes added per part */}
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/preferences" element={<PreferencesPage />} />
+              {/* Placeholder pages for briefings and alerts (full UI in next iteration) */}
+              <Route path="/briefings" element={
+                <div className="max-w-3xl mx-auto px-4 py-8">
+                  <h1 className="text-2xl font-bold text-white mb-4">Briefings</h1>
+                  <p className="text-gray-400">Your briefing history will appear here.</p>
+                </div>
+              } />
+              <Route path="/alerts" element={
+                <div className="max-w-3xl mx-auto px-4 py-8">
+                  <h1 className="text-2xl font-bold text-white mb-4">Alerts</h1>
+                  <p className="text-gray-400">Real-time alerts will appear here when high-importance news breaks.</p>
+                </div>
+              } />
+            </Route>
+          </Route>
+
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

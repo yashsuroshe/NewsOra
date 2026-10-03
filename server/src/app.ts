@@ -102,13 +102,18 @@ export function createApp(): express.Application {
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
+import { createServer } from 'http';
+import { initSocketServer } from './sockets/socket.js';
+
 async function bootstrap(): Promise<void> {
-  // Connect to dependencies first
   await connectDatabase();
-  getRedisClient(); // initialise connection
+  getRedisClient();
 
   const app = createApp();
-  const server = app.listen(config.PORT, () => {
+  const httpServer = createServer(app);
+  initSocketServer(httpServer);
+
+  const server = httpServer.listen(config.PORT, () => {
     logger.info(`🚀 API Server running on port ${config.PORT} [${config.NODE_ENV}]`);
   });
 
