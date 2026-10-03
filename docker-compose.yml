@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # ── API Server ────────────────────────────────────────────
+  api:
+    build:
+      context: ./server
+      target: development
+    command: npm run dev
+    ports:
+      - '3001:3001'
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Ingestion Worker ──────────────────────────────────────
+  ingestion-worker:
+    build:
+      context: ./server
+      target: development
+    command: npm run dev:worker:ingest
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Agent Worker ──────────────────────────────────────────
+  agent-worker:
+    build:
+      context: ./server
+      target: development
+    command: npm run dev:worker:agent
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── React Frontend ────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      target: development
+    command: npm run dev -- --host
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./client/src:/app/src:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── MongoDB ───────────────────────────────────────────────
+  mongodb:
+    image: mongo:7-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ─────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:

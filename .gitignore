@@ -1,0 +1,40 @@
+# NewsOra — Dependency & Build Artifacts
+node_modules/
+dist/
+build/
+.next/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pino-*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker volumes
+mongodb_data/
+redis_data/
+qdrant_storage/
+
+# TypeScript
+*.tsbuildinfo
