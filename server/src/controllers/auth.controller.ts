@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service.js';
 import type { AuthRequest } from '../types/index.js';
+import type { IUser } from '../models/index.js';
 import type { RegisterInput, LoginInput } from '../validators/auth.schema.js';
 import { config } from '../config/index.js';
 
@@ -19,12 +20,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
   try {
     const { user, tokens } = await authService.register(req.body as RegisterInput);
     res.cookie(COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
-    res.status(201).json({
-      data: {
-        user,
-        accessToken: tokens.accessToken,
-      },
-    });
+    res.status(201).json({ data: { user, accessToken: tokens.accessToken } });
   } catch (err) {
     next(err);
   }
@@ -36,12 +32,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   try {
     const { user, tokens } = await authService.login(req.body as LoginInput);
     res.cookie(COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
-    res.status(200).json({
-      data: {
-        user,
-        accessToken: tokens.accessToken,
-      },
-    });
+    res.status(200).json({ data: { user, accessToken: tokens.accessToken } });
   } catch (err) {
     next(err);
   }
@@ -85,6 +76,36 @@ export async function getMe(req: Request, res: Response, next: NextFunction): Pr
     const userId = (req as AuthRequest).userId;
     const user = await authService.getMe(userId);
     res.status(200).json({ data: user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /api/v1/auth/google/callback ────────────────────────────────────────
+
+/**
+ * Called by Passport after Google verifies the user.
+ * Issues JWT tokens and redirects to the client.
+ * Refresh token → httpOnly cookie | Access token → query param for client pickup.
+ *
+ * Redirect: CLIENT_URL/auth/callback?token=<accessToken>
+ */
+export async function googleCallback(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = req.user as IUser | undefined;
+
+    if (!user) {
+      res.redirect(`${config.CLIENT_URL}/auth/error?code=OAUTH_FAILED`);
+      return;
+    }
+
+    const tokens = await authService.googleAuth(user);
+    res.cookie(COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
+    res.redirect(`${config.CLIENT_URL}/auth/callback?token=${tokens.accessToken}`);
   } catch (err) {
     next(err);
   }

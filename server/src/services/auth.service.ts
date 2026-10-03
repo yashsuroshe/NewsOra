@@ -168,3 +168,17 @@ export async function getMe(userId: string): Promise<IUser> {
   if (!user) throw new InvalidCredentialsError();
   return user;
 }
+
+/**
+ * Issue a JWT token pair for a user who has been authenticated via Google OAuth.
+ * Called from the /auth/google/callback route after Passport validates the profile.
+ */
+export async function googleAuth(user: IUser): Promise<TokenPair> {
+  const refreshToken = signRefreshToken(user.id as string);
+  await User.findByIdAndUpdate(user.id, { refreshTokenHash: sha256(refreshToken) });
+
+  return {
+    accessToken: signAccessToken(user.id as string, user.email),
+    refreshToken,
+  };
+}

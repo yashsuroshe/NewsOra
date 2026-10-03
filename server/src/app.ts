@@ -6,14 +6,20 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import rateLimit from 'express-rate-limit';
+import passport from 'passport';
 
 import { config } from './config/index.js';
 import { connectDatabase } from './config/database.js';
 import { getRedisClient } from './config/redis.js';
 import { logger } from './utils/logger.js';
+import { configurePassport } from './config/passport.js';
 import { requestId } from './middleware/requestId.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import routes from './routes/index.js';
+
+// Configure Passport strategies at module load time
+configurePassport();
+
 
 // ─── Create Express App ───────────────────────────────────────────────────────
 
@@ -62,6 +68,7 @@ export function createApp(): express.Application {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(compression());
+  app.use(passport.initialize()); // No sessions — stateless JWT architecture
 
   // ── Request ID + Logging ──────────────────────────────────────────────────
   app.use(requestId);
